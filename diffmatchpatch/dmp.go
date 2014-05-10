@@ -511,18 +511,18 @@ func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string
 	return chars1, chars2, lineArray
 }
 
-// DiffLinesToChars split two texts into a list of strings.  Reduces the texts to a string of
-// hashes where each Unicode character represents one line.
+// DiffWordsToChars split two texts into a list of strings.  Reduces the texts to a string of
+// hashes where each Unicode character represents one word.
 func (dmp *DiffMatchPatch) DiffWordsToChars(text1, text2 string) (string, string, []string) {
 	// '\x00' is a valid character, but various debuggers don't like it.
 	// So we'll insert a junk entry to avoid generating a null character.
-	lineArray := []string{""}    // e.g. lineArray[4] == 'Hello\n'
-	lineHash := map[string]int{} // e.g. lineHash['Hello\n'] == 4
+	wordArray := []string{""}    // e.g. lineArray[4] == 'Hello\n'
+	wordHash := map[string]int{} // e.g. lineHash['Hello\n'] == 4
 
-	chars1 := dmp.diffWordsToCharsMunge(text1, &lineArray, lineHash)
-	chars2 := dmp.diffWordsToCharsMunge(text2, &lineArray, lineHash)
+	chars1 := dmp.diffWordsToCharsMunge(text1, &wordArray, wordHash)
+	chars2 := dmp.diffWordsToCharsMunge(text2, &wordArray, wordHash)
 
-	return chars1, chars2, lineArray
+	return chars1, chars2, wordArray
 }
 
 // diffLinesToCharsMunge splits a text into an array of strings.  Reduces the texts to a string of
@@ -559,40 +559,38 @@ func (dmp *DiffMatchPatch) diffLinesToCharsMunge(text string, lineArray *[]strin
 	return string(runes)
 }
 
-// diffLinesToCharsMunge splits a text into an array of strings.  Reduces the texts to a string of
-// hashes where each Unicode character represents one line.
-// Modifies linearray and linehash through being a closure.
-func (dmp *DiffMatchPatch) diffWordsToCharsMunge(text string, lineArray *[]string, lineHash map[string]int) string {
-	// Walk the text, pulling out a substring for each line.
-	// text.split('\n') would would temporarily double our memory footprint.
-	// Modifying text would create many large strings to garbage collect.
-	lineStart := 0
-	lineEnd := -1
+// diffWordsToCharsMunge splits a text into an array of strings.  Reduces the texts to a string of
+// hashes where each Unicode character represents one word.
+// Modifies wordarray and wordhash through being a closure.
+func (dmp *DiffMatchPatch) diffWordsToCharsMunge(text string, wordArray *[]string, wordHash map[string]int) string {
+	// Walk the text, pulling out a substring for each word.
+	wordStart := 0
+	wordEnd := -1
 	runes := []rune{}
 
-	for lineEnd < len(text)-1 {
-		lineIndex := indexOf(text, "\n", lineStart)
-		wordIndex := indexOf(text, " ", lineStart)
+	for wordEnd < len(text)-1 {
+		lineIndex := indexOf(text, "\n", wordStart)
+		wordIndex := indexOf(text, " ", wordStart)
 		if lineIndex < wordIndex && lineIndex != -1 || wordIndex == -1 {
-			lineEnd = lineIndex
+			wordEnd = lineIndex
 		} else {
-			lineEnd = wordIndex
+			wordEnd = wordIndex
 		}
 
-		if lineEnd == -1 {
-			lineEnd = len(text) - 1
+		if wordEnd == -1 {
+			wordEnd = len(text) - 1
 		}
 
-		line := text[lineStart : lineEnd+1]
-		lineStart = lineEnd + 1
-		lineValue_, ok := lineHash[line]
+		word := text[wordStart : wordEnd+1]
+		wordStart = wordEnd + 1
+		wordValue_, ok := wordHash[word]
 
 		if ok {
-			runes = append(runes, rune(lineValue_))
+			runes = append(runes, rune(wordValue_))
 		} else {
-			*lineArray = append(*lineArray, line)
-			lineHash[line] = len(*lineArray) - 1
-			runes = append(runes, rune(len(*lineArray)-1))
+			*wordArray = append(*wordArray, word)
+			wordHash[word] = len(*wordArray) - 1
+			runes = append(runes, rune(len(*wordArray)-1))
 		}
 	}
 
